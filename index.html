@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Inventory & Stock Tracker</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #27ae60;
+            --light-bg: #f8f9fa;
+            --border: #e2e8f0;
+            --text: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: var(--text);
+            padding-bottom: 60px;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 1rem auto;
+            padding: 0 1rem;
+        }
+
+        .controls {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .date-picker-group, .search-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        input[type="date"], input[type="text"], select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .categories {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .cat-btn {
+            background: white;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .cat-btn.active, .cat-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .product-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.1s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .product-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.8rem;
+            color: var(--primary);
+            text-transform: capitalize;
+        }
+
+        .stock-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-qty {
+            background: #edf2f7;
+            border: 1px solid #cbd5e0;
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .btn-qty:hover {
+            background: #e2e8f0;
+        }
+
+        .qty-input {
+            width: 70px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .actions-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 0.8rem 1rem;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .btn-action {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-action:hover {
+            background: #219150;
+        }
+
+        .btn-secondary {
+            background: #718096;
+        }
+
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+
+        .no-results {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 2rem;
+            color: #718096;
+        }
+
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+            }
+            .date-picker-group, .search-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Daily Stock Collector</h1>
+        <p style="font-size:0.85rem; opacity:0.8">Track and manage inventory every day</p>
+    </header>
+
+    <div class="container">
+        <!-- Controls: Date and Search -->
+        <div class="controls">
+            <div class="date-picker-group">
+                <label for="stockDate">Date:</label>
+                <input type="date" id="stockDate">
+            </div>
+
+            <div class="search-group">
+                <input type="text" id="searchInput" placeholder="Search product name...">
+            </div>
+        </div>
+
+        <!-- Filter Categories -->
+        <div class="categories" id="categoryContainer">
+            <button class="cat-btn active" onclick="filterCategory('all', this)">All Items</button>
+            <button class="cat-btn" onclick="filterCategory('soap', this)">Soaps</button>
+            <button class="cat-btn" onclick="filterCategory('cream', this)">Creams</button>
+            <button class="cat-btn" onclick="filterCategory('lotion', this)">Lotions</button>
+            <button class="cat-btn" onclick="filterCategory('oil', this)">Oils & Serums</button>
+            <button class="cat-btn" onclick="filterCategory('pills', this)">Pills & Capsules</button>
+            <button class="cat-btn" onclick="filterCategory('tea', this)">Teas & Powders</button>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="stock-grid" id="productGrid"></div>
+    </div>
+
+    <!-- Bottom Fixed Actions Bar -->
+    <div class="actions-bar">
+        <button class="btn-action btn-secondary" onclick="exportData()">Export Backups</button>
+        <button class="btn-action" onclick="saveCurrentStock()">Save Today's Stock</button>
+    </div>
+
+    <script>
+        // Array of raw product names based on input list
+        const rawProducts = [
+            "Organic Black soap 250ml", "Organic Black soap 150ml", "3d whitening soap 500ml", "5d black moroccan black soap 500ml",
+            "clear up face cream 50g", "3d intense whitening cream 50g", "5d extra whitening face cream 50g", "extreme whitening face cream 50g",
+            "3days spot remover face cream 50g", "stretch marks cream 100ml", "face and body spot remover 300ml", "3d intense whitening lotion 250ml",
+            "3d intense whitening lotion 500ml", "5d extra whitening lotion 250ml", "5d extra whitening lotion 500ml", "lightening clear up lotion 400ml",
+            "super whitening lotion 250ml", "super whitening lotion 500ml", "extreme whitening lotion 250ml", "extreme whitening lotion 500ml",
+            "glow body lotion 500ml", "tumeric lotion 500ml", "whitening half cast oil 125ml", "3d whitening half cast oil 125ml",
+            "5d extra whitening oil 125ml", "glow body oil 100ml", "tumeric whitening oil 100ml", "sun burn oil 240ml",
+            "bird nest facial serum 40ml", "dark spot face toner 50g", "extreme whitening shower gel 500ml", "tumeric whitening scrub 500ml",
+            "yodi pills 60pills", "abuja mix 60capsule", "7days bbl pills 60capsule", "ultimate maca pills", "zahid vita + 30pills",
+            "matoko magic pills 60 capsules", "3days hip and butt enlargement 10capsule", "talatin 30 tablets", "28 days detox flat tummy capsule 60 capsules",
+            "28 days detox flat tummy tea 28 tea bags", "moringa flat tummy tea 28 tea bags", "nano fast slim 60 capsules", "gee's weight gain syrup 100ml",
+            "gee's weight gain protein powder 500g", "weight gain powder 100g", "apetamin weight gain syrup 300ml", "matako magic cream 150ml",
+            "abuja mix cream 150ml", "gluta white pills 60 capsules", "gluta berry shake frozen collagen pills 60 capsule", "[all] gummies",
+            "strech marks oil 100ml", "aha lotion 500ml", "gluta white fomulated whitening lotion 250ml", "clinic clear lotion 250ml",
+            "whitenng milk lotion 500ml", "all dr davey lotions 500ml", "lady spray idea 250ml", "60 spf sun spray and screansos zero acne",
+            "papaya oil and rose oil", "extra peeling oil 110ml", "all small bath soaps", "tumeric facial mask", "snow white oil 125ml",
+            "white patches remover", "all kojic acids", "cleanses pink powder and salt", "all scrubs", "all hair stuff", "ubulongwa soaps",
+            "pain relief cream", "tumeric and vitamin c", "super whitenin body lotion", "hip up and firming cream 500ml", "toners 400ml",
+            "all dr rashel", "dr davey dark knuckle luxurious oils", "all caramel products", "kamagra oral jelly", "flower of happiness",
+            "shea butter", "egyptian lotions", "daqan spray private", "effineax clarifying lotion", "enlargement booty filler syrup",
+            "snow white soap 250ml", "luxurious lotion 300ml", "luxurious serum 250ml", "luxurious protection spf 30", "retinol vitamin complex",
+            "srubtea tree hemp", "clay mask", "centella asiatica aloe gel", "luxurious face cream", "prettybe brightening body wash",
+            "dark knuckle cream 50g", "action miracle knuckle cream", "hips and bums gee cream 100g", "axis-y dark spot correting glow cream 50ml",
+            "axis-y dark spot correcting glow serum", "3days spot remover 50g", "carrot oil 100ml", "nomonde luxe care pills",
+            "pink lip balm big", "6x enlarge buttocks", "pink lip balm small", "super boost breast hip and butt 90capsules",
+            "big nyash pills 60capsules", "enhancement plus big hip 50g", "bbl nyash herbs powder", "kalyaan pills", "clear gly oil",
+            "DR DAVEY COCOA GLOW BODY OIL", "apetamin bobaraba 5x herbal hip/but tea", "apetamin bobaraba protein powder", "tummy belt",
+            "weight gain capsules", "gee's yodi pills", "perfumes", "orig pills", "flat tummy fat burning cream", "flat tummy", "fat burning oil"
+        ];
+
+        // Deduplicate list safely
+        const uniqueProducts = Array.from(new Set(rawProducts.map(item => item.trim())));
+
+        let currentActiveCategory = 'all';
+        let stockDatabase = JSON.parse(localStorage.getItem('daily_stock_db')) || {};
+
+        const dateInput = document.getElementById('stockDate');
+        const searchInput = document.getElementById('searchInput');
+        const productGrid = document.getElementById('productGrid');
+
+        // Initialize today's date in picker
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+
+        // Load Stock interface
+        function loadProducts() {
+            const selectedDate = dateInput.value;
+            const searchTerm = searchInput.value.toLowerCase();
+            const currentDayStock = stockDatabase[selectedDate] || {};
+
+            productGrid.innerHTML = '';
+
+            const filteredList = uniqueProducts.filter(item => {
+                const matchesSearch = item.toLowerCase().includes(searchTerm);
+                const matchesCat = currentActiveCategory === 'all' ? true : item.toLowerCase().includes(currentActiveCategory);
+                return matchesSearch && matchesCat;
+            });
+
+            if (filteredList.length === 0) {
+                productGrid.innerHTML = `<div class="no-results">No products found matching your search/filter.</div>`;
+                return;
+            }
+
+            filteredList.forEach((productName) => {
+                const qty = currentDayStock[productName] !== undefined ? currentDayStock[productName] : 0;
+                
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-title">${productName}</div>
+                    <div class="stock-controls">
+                        <button class="btn-qty" onclick="changeQty('${escapeQuotes(productName)}', -1)">-</button>
+                        <input type="number" class="qty-input" min="0" value="${qty}" id="input-${slugify(productName)}" onchange="updateQtyDirect('${escapeQuotes(productName)}', this.value)">
+                        <button class="btn-qty" onclick="changeQty('${escapeQuotes(productName)}', 1)">+</button>
+                    </div>
+                `;
+                productGrid.appendChild(card);
+            });
+        }
+
+        function changeQty(productName, delta) {
+            const selectedDate = dateInput.value;
+            if (!stockDatabase[selectedDate]) stockDatabase[selectedDate] = {};
+
+            let currentVal = stockDatabase[selectedDate][productName] || 0;
+            let newVal = Math.max(0, currentVal + delta);
+            
+            stockDatabase[selectedDate][productName] = newVal;
+            
+            // Update input UI directly without full re-render for performance
+            const inputElem = document.getElementById(`input-${slugify(productName)}`);
+            if (inputElem) inputElem.value = newVal;
+        }
+
+        function updateQtyDirect(productName, val) {
+            const selectedDate = dateInput.value;
+            if (!stockDatabase[selectedDate]) stockDatabase[selectedDate] = {};
+            stockDatabase[selectedDate][productName] = Math.max(0, parseInt(val) || 0);
+        }
+
+        function saveCurrentStock() {
+            localStorage.setItem('daily_stock_db', JSON.stringify(stockDatabase));
+            alert(`Stock for ${dateInput.value} saved successfully!`);
+        }
+
+        function filterCategory(cat, btnElement) {
+            currentActiveCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            loadProducts();
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(stockDatabase, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `stock_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Helper utilities
+        function slugify(text) {
+            return text.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        }
+
+        function escapeQuotes(text) {
+            return text.replace(/'/g, "\\'");
+        }
+
+        // Event Listeners
+        dateInput.addEventListener('change', loadProducts);
+        searchInput.addEventListener('input', loadProducts);
+
+        // First render
+        loadProducts();
+    </script>
+</body>
+</html>
